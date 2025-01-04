@@ -1,7 +1,9 @@
+import csv
 import datetime
 import ssl
 import urllib.parse
 from concurrent.futures import ThreadPoolExecutor
+from functools import partial
 
 import requests
 import scrapy
@@ -20,6 +22,9 @@ password = "@Bb11033003"  # 包含 @ 符號的密碼
 server_address = "140.118.60.18"
 database_name = "model"
 driver = "ODBC Driver 17 for SQL Server"
+
+cookies = {}
+headers = {}
 
 
 def create_session():
@@ -83,14 +88,14 @@ class TLSAdapter(HTTPAdapter):
         return super().init_poolmanager(*args, **kwargs)
 
             
-def parse_detail(page):
+def parse_detail(page,keyword):
     adapter = TLSAdapter(tls_version=ssl.TLSVersion.TLSv1_3)
     session = requests.Session()
     session.mount("https://", adapter)
     url = f"https://www.researchgate.net:443/search/publication?q={keyword}&page={page}"
     response = session.get(url, headers=headers, cookies=cookies, timeout=10)
     if response.status_code != 200:
-        print('驗證錯誤')
+        print(f'驗證錯誤response.status_code:{response.status_code}')
     soup = BeautifulSoup(response.text, 'lxml')
     items = []
     for sing_publications in soup.select('[class="nova-legacy-c-card__body nova-legacy-c-card__body--spacing-inherit"]'):
@@ -158,40 +163,51 @@ def parse_date(date_str):
         print(f"Error parsing date '{date_str}': {str(e)}")
         return None
     
-def main(): 
-    with ThreadPoolExecutor(max_workers=8) as executor:
-        results = executor.map(parse_detail, range(1, 51))
-    
-    research_gate_publication = defi_talbe()
-    session = create_session()
-    for items in results:
-        for item in items:
-            publication_data = {
-                'title': item.get('title'),
-                'link': item.get('link'),
-                'year': item.get('year'),
-                'publication_type': item.get('publication_type'),
-                'publication_date': parse_date(item.get('publication_date')),
-                'doi': item.get('doi', ''),  # 預設 DOI 為空字符串
-                'abstract': item.get('abstract'),
-                'authors': item.get('authors'),
-                'patent': item.get('patent', ''),  # 預設 patent 為空字符串
-                'created_at': datetime.datetime.now(),
-                'updated_at': datetime.datetime.now(),
-            }
+def research_publication(keywords,cf_clearance, user_agent):   
+    global cookies, headers
 
-            # 將數據插入資料庫
-            session.execute(insert(research_gate_publication).values(publication_data))
-            session.commit()
-    session.close()
-
-
-if __name__ == '__main__':
-    # cf_clearance 一定要是經過cloudflare驗證的，如果沒有辦法觸發cloudflare 那就先跑一次
-    keyword = 'antenna'
-    cf_clearance = '.ldO8y8NoIHlKvsXSoW3IJZ3G9SZVqqNJPtCANaQdpM-1735857070-1.2.1.1-gn2GXv4mfrF5HB0EYAwpkU4yUWphS2FZ73KjgyNtOHqdfN51XYq3swEEwW4aSh4L56QcSzYnNkxc3_KJEFvaZATvequscbtsIqJ4g82Wku.HwyNGyKC9v.5jUzX2VHBcg1tsbhHZCOCxDR5fvA3DnW.B2cRXtEgFYh3C5ClNCjy2DtgeC1GQh3uicdgNaCvTE63XW_zwkXgiv_IJmmMqj_ZQw5dTHG_rOxE123dNN0gHYCEJwou9Z9RgXW3lUI4NfbCnvKF9Ox7uRsJCZLhO3PS36niiBzQ2Lvx6s2AsN7FKmuvoM6cYp.VA9tE3nf4r2dXxglxKtNkrhGmXipkYD_Xm9vU5t35vmGPt5O9MmBpaIySPbOYI8nxRmgD4Wac_C9d2.DwXORLl8zMX9ECi_pCTliMqjbylx0L2rgLof16xkNvOUC8KRgOw.qDxn1l5'
-    user_agent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36'
     cookies = {"cf_clearance":cf_clearance}
     headers = {"User-Agent":user_agent}
+    for keyword in keywords:
+        with ThreadPoolExecutor(max_workers=8) as executor:
+            parse_detail_with_keyword = partial(parse_detail, keyword=keyword)
+            results = executor.map(parse_detail_with_keyword, range(1, 21))
+        fieldnames = [
+            'title', 'link', 'year', 'publication_type', 'publication_date',
+            'doi', 'abstract', 'authors', 'patent', 'created_at', 'updated_at'
+        ]
+        research_gate_publication = defi_talbe()
+        session = create_session()
+        with open('research_gate_publication_spider_output.csv', mode='w', newline='', encoding='utf-8') as file:
+            writer = csv.DictWriter(file, fieldnames=fieldnames)
+            writer.writeheader()
+            for items in results:
+                for item in items:
+                    publication_data = {
+                        'title': item.get('title'),
+                        'link': item.get('link'),
+                        'year': item.get('year'),
+                        'publication_type': item.get('publication_type'),
+                        'publication_date': parse_date(item.get('publication_date')),
+                        'doi': item.get('doi', ''),  # 預設 DOI 為空字符串
+                        'abstract': item.get('abstract'),
+                        'authors': item.get('authors'),
+                        'patent': item.get('patent', ''),  # 預設 patent 為空字符串
+                        'created_at': datetime.datetime.now(),
+                        'updated_at': datetime.datetime.now(),
+                    }
+                    writer.writerow(publication_data)
+                    # 將數據插入資料庫
+                    session.execute(insert(research_gate_publication).values(publication_data))
+                    session.commit()
+            session.close()
+
+
+# if __name__ == '__main__':
+#     # cf_clearance 一定要是經過cloudflare驗證的，如果沒有辦法觸發cloudflare 那就先跑一次
+#     keyword = 'antenna'
+#     cf_clearance = '_FDaXi2lH692S_bFfYWJLRALzHjqTZxILlYHhV5L7kU-1735883763-1.2.1.1-aILIglYP5Ab9xJKs.fWKKyB0kAAbQsH3OJIyq3lr4sbg.PhlPAR18cYDzBdtj5UQf2r27B2Qw3maR3mz.RfhGRpvcMKap08pXazoAM2Y8IkL0ZOOEipzzWYSho1gek6y9xPKpBStoim_wslOK4knbsdeabaQVfuDuHo9S.NKeb9GX9nROuHWSogex6HbTpM5CXP0y7VcsQIFOoNpYsB671GHi9cGQvTpam6XNb6kV6BF9Z9a7kt8S0R3yIkNZGD.SOn36X5rGcUDjprieHhH0ZzAhWmjzs40WdaGvqYQehVyket3a5_aWhoW_eNIk58_AuscAmglHlI2tHlNPnykTqn52nGIXkOTHwjHeCkE7iEXC2NAAGKd4uc75qLaFqI0VXNL8Aj03gRSqrYP8.vGcU45erv7AYqo596yIYamXFOrs2OgGjvUJQ08R1tcM3lv'
+#     user_agent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36'
+
     
-    main()
+#     main()

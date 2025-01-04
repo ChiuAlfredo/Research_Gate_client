@@ -1,3 +1,4 @@
+import csv
 import datetime
 import ssl
 import urllib.parse
@@ -8,6 +9,9 @@ import scrapy
 from bs4 import BeautifulSoup
 from dateutil import parser
 from requests.adapters import HTTPAdapter
+from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.chrome.service import Service
 from sqlalchemy import (DECIMAL, NVARCHAR, Boolean, Column, Date, DateTime,
                         Float, Integer, MetaData, String, Table, Text,
                         create_engine, func, insert)
@@ -132,37 +136,64 @@ def parse_date(date_str):
         # 捕捉解析錯誤，並記錄錯誤信息
         print(f"Error parsing date '{date_str}': {str(e)}")
         return None
-    
+
+def get_headers_cookies():
+    # 建立 ChromeDriver 的服務
+    service = Service()
+
+    # 設定 Chrome 的選項
+    chrome_options = Options()
+    chrome_options.add_argument("--start-maximized")  # 瀏覽器啟動時最大化
+    chrome_options.add_argument("--disable-infobars")  # 禁用 "Chrome 正在受自動測試軟件控制" 的提示
+    chrome_options.add_argument("--disable-extensions")  
+
+    # 啟動 WebDriver
+    driver = webdriver.Chrome(service=service, options=chrome_options)
+    driver.get(url = f"https://www.researchgate.net:443/search/publication?q={keyword}&page=1")
+    # 獲取 User-Agent
+    user_agent = driver.execute_script("return navigator.userAgent;")
+
+    # 獲取所有的 cookies
+    cookies = driver.get_cookies()
+    cf_clearance = next((cookie['value'] for cookie in cookies if cookie['name'] == 'cf_clearance'), None)
+    driver.close()
+    return user_agent, cf_clearance
+
 def main(): 
     with ThreadPoolExecutor(max_workers=8) as executor:
-        results = executor.map(parse_detail, range(1, 51))
-    
+        results = executor.map(parse_detail, range(1, 21))
+    fieldnames = [
+        'title', 'link', 'question_date', 'question_abstract',
+        'answer_content', 'has_more_answers', 'created_at', 'updated_at'
+    ]
     research_gate_questions = defi_talbe()
     session = create_session()
-    for items in results:
-        for item in items:
-            ResearchGateQuestionPipelinetion_data = {
-                'title': item.get('title'),
-                'link': item.get('link'),
-                'question_date': parse_date(item.get('question_date')),
-                'question_abstract': item.get('question_abstract'),
-                'answer_content': ' | '.join(item.get('answer_content', [])),
-                'has_more_answers': item.get('has_more_answers', False),  # 預設 patent 為空字符串
-                'created_at': datetime.datetime.now(),
-                'updated_at': datetime.datetime.now(),
-            }
-
-            # 將數據插入資料庫
-            session.execute(insert(research_gate_questions).values(ResearchGateQuestionPipelinetion_data))
-            session.commit()
-    session.close()
+    with open('research_gate_questions_spider_output.csv', mode='w', newline='', encoding='utf-8') as file:
+        writer = csv.DictWriter(file, fieldnames=fieldnames)
+        writer.writeheader()
+        for items in results:
+            for item in items:
+                ResearchGateQuestionPipelinetion_data = {
+                    'title': item.get('title'),
+                    'link': item.get('link'),
+                    'question_date': parse_date(item.get('question_date')),
+                    'question_abstract': item.get('question_abstract'),
+                    'answer_content': ' | '.join(item.get('answer_content', [])),
+                    'has_more_answers': item.get('has_more_answers', False),  # 預設 patent 為空字符串
+                    'created_at': datetime.datetime.now(),
+                    'updated_at': datetime.datetime.now(),
+                }
+                writer.writerow(ResearchGateQuestionPipelinetion_data)
+                # 將數據插入資料庫
+                session.execute(insert(research_gate_questions).values(ResearchGateQuestionPipelinetion_data))
+                session.commit()
+        session.close()
 
 
 if __name__ == '__main__':
     # cf_clearance 一定要是經過cloudflare驗證的，如果沒有辦法觸發cloudflare 那就先跑一次
     keyword = 'antenna'
-    cf_clearance = '.ldO8y8NoIHlKvsXSoW3IJZ3G9SZVqqNJPtCANaQdpM-1735857070-1.2.1.1-gn2GXv4mfrF5HB0EYAwpkU4yUWphS2FZ73KjgyNtOHqdfN51XYq3swEEwW4aSh4L56QcSzYnNkxc3_KJEFvaZATvequscbtsIqJ4g82Wku.HwyNGyKC9v.5jUzX2VHBcg1tsbhHZCOCxDR5fvA3DnW.B2cRXtEgFYh3C5ClNCjy2DtgeC1GQh3uicdgNaCvTE63XW_zwkXgiv_IJmmMqj_ZQw5dTHG_rOxE123dNN0gHYCEJwou9Z9RgXW3lUI4NfbCnvKF9Ox7uRsJCZLhO3PS36niiBzQ2Lvx6s2AsN7FKmuvoM6cYp.VA9tE3nf4r2dXxglxKtNkrhGmXipkYD_Xm9vU5t35vmGPt5O9MmBpaIySPbOYI8nxRmgD4Wac_C9d2.DwXORLl8zMX9ECi_pCTliMqjbylx0L2rgLof16xkNvOUC8KRgOw.qDxn1l5'
-    user_agent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36'
+    user_agent, cf_clearance = get_headers_cookies()
     cookies = {"cf_clearance":cf_clearance}
     headers = {"User-Agent":user_agent}
     
