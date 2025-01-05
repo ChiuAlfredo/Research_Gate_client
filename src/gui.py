@@ -1,6 +1,8 @@
-from tkinter import Tk, Label, Entry, Button, StringVar, Radiobutton, IntVar
+from tkinter import Button, Entry, IntVar, Label, Radiobutton, StringVar, Tk
+
 from utils.research_gate_publication_spider import research_publication
 from utils.research_gate_questions_spider import research_question
+
 
 class MyGUI:
     def __init__(self, master):
@@ -38,18 +40,21 @@ class MyGUI:
         self.submit_button.pack()
 
     def submit(self):
-        keywords = self.keyword_var.get()
-        cf_clearance = self.cf_clearance_var.get()
-        user_agent = self.user_agent_var.get()
+        keywords = self.keyword_var.get().strip()
+        cf_clearance = self.cf_clearance_var.get().strip()
+        user_agent = self.user_agent_var.get().strip()
         option = self.option_var.get()
-
+        
+        print(keywords)
+        print(cf_clearance)
+        print(user_agent)
 
         if option == 1:
             research_publication(keywords,cf_clearance, user_agent)
-        elif option == 2:
-            research_question(keywords,cf_clearance, user_agent)
-        else:
-            results = "Please select an option."
+        # elif option == 2:
+        #     research_question(keywords,cf_clearance, user_agent)
+        # else:
+        #     results = "Please select an option."
 
         print('已經完成')
         
