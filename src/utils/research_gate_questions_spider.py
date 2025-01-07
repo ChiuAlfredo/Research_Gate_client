@@ -145,17 +145,18 @@ def research_question(keywords,cf_clearance, user_agent):
     cookies = {"cf_clearance":cf_clearance}
     headers = {"User-Agent":user_agent}
     
+    fieldnames = [
+                'title', 'link', 'question_date', 'question_abstract',
+                'answer_content', 'has_more_answers', 'created_at', 'updated_at'
+            ]
     with open('research_gate_questions_spider_output.csv', mode='w', newline='', encoding='utf-8') as file:
         writer = csv.DictWriter(file, fieldnames=fieldnames)
-        writer.writeheader()
+        writer.writeheader() #
         for keyword in keywords:
             with ThreadPoolExecutor(max_workers=8) as executor:
                 parse_detail_with_keyword = partial(parse_detail, keyword=keyword)
                 results = executor.map(parse_detail_with_keyword, range(1, 21))
-            fieldnames = [
-                'title', 'link', 'question_date', 'question_abstract',
-                'answer_content', 'has_more_answers', 'created_at', 'updated_at'
-            ]
+            
             research_gate_questions = defi_talbe()
             session = create_session()
             for items in results:
