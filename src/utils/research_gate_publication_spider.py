@@ -190,7 +190,7 @@ def research_publication(keywords,cf_clearance, user_agent):
                 function_name="research-gate-publication",
                 keyword=keywords,
                 keyword_type="AND",
-                status="In Progress",
+                status="Success",
                 other=None,
             )
             with ThreadPoolExecutor(max_workers=8) as executor:

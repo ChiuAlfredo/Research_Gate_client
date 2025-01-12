@@ -169,7 +169,7 @@ def research_question(keywords,cf_clearance, user_agent):
                 function_name="research-gate-questions",
                 keyword=keywords,
                 keyword_type="AND",
-                status="In Progress",
+                status="Success",
             )
             with ThreadPoolExecutor(max_workers=8) as executor:
                 parse_detail_with_keyword = partial(parse_detail, keyword=keyword)
