@@ -40,7 +40,7 @@ def create_session():
     session = SessionLocal()
     return session
 
-def defi_talbe():
+def defi_table():
     Base = declarative_base()
     metadata = Base.metadata
     research_gate_publication = Table(
@@ -192,7 +192,7 @@ def main():
         'title', 'link', 'year', 'publication_type', 'publication_date',
         'doi', 'abstract', 'authors', 'patent', 'created_at', 'updated_at'
     ]
-    research_gate_publication = defi_talbe()
+    research_gate_publication = defi_table()
     session = create_session()
     with open('research_gate_publication_spider_output.csv', mode='w', newline='', encoding='utf-8') as file:
         writer = csv.DictWriter(file, fieldnames=fieldnames)
