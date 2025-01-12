@@ -171,15 +171,7 @@ def log_search_history(
 def research_publication(keywords,cf_clearance, user_agent):
     global cookies, headers
 
-    trackid = uuid.uuid1().hex
-    log_search_history(
-        trackid=trackid,
-        function_name="research-gate-publication",
-        keyword=keywords,
-        keyword_type="AND",
-        status="In Progress",
-        other=None,
-    )
+    
 
     cookies = {"cf_clearance":cf_clearance}
     headers = {"User-Agent":user_agent}
@@ -192,6 +184,15 @@ def research_publication(keywords,cf_clearance, user_agent):
         writer.writeheader()
         
         for keyword in keywords:
+            trackid = uuid.uuid1().hex
+            log_search_history(
+                trackid=trackid,
+                function_name="research-gate-publication",
+                keyword=keywords,
+                keyword_type="AND",
+                status="In Progress",
+                other=None,
+            )
             with ThreadPoolExecutor(max_workers=8) as executor:
                 parse_detail_with_keyword = partial(parse_detail, keyword=keyword)
                 results = executor.map(parse_detail_with_keyword, range(1, 11))
