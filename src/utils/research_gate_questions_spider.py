@@ -1,74 +1,20 @@
 import csv
 import datetime
 import ssl
-import urllib.parse
 from concurrent.futures import ThreadPoolExecutor
 from functools import partial
 
 import requests
-import scrapy
 from bs4 import BeautifulSoup
 from dateutil import parser
 from requests.adapters import HTTPAdapter
-from sqlalchemy import (DECIMAL, NVARCHAR, Boolean, Column, Date, DateTime,
-                        Float, Integer, MetaData, String, Table, Text,
-                        create_engine, func, insert)
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy import insert
 
-# 設定資料庫連接資訊
-username = "SA"
-password = "@Bb11033003"  # 包含 @ 符號的密碼
-server_address = "140.118.60.18"
-database_name = "model"
-driver = "ODBC Driver 17 for SQL Server"
-
+from utils.model import (ResearchGateQuestionItem, create_session,
+                         defi_research_gate_questions_talbe)
 
 cookies = {}
 headers = {}
-
-
-def create_session():
-    username_encoded = urllib.parse.quote_plus(username)
-    password_encoded = urllib.parse.quote_plus(password)
-    driver_encoded = urllib.parse.quote_plus(driver)
-
-    sqlalchemy_connection_string = (
-        f"mssql+pyodbc://{username_encoded}:{password_encoded}@{server_address}/{database_name}"
-        f"?driver={driver_encoded}&encoding=utf8"
-    )
-    engine = create_engine(sqlalchemy_connection_string)
-    SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-    session = SessionLocal()
-    return session
-
-def defi_talbe():
-    Base = declarative_base()
-    metadata = Base.metadata
-    research_gate_questions = Table(
-        'research_gate_questions', metadata,
-        Column('id', Integer, primary_key=True, autoincrement=True),
-        Column('title', NVARCHAR(255), nullable=False),
-        Column('link', Text, nullable=True),
-        Column('question_date', Date, nullable=True),
-        Column('question_abstract', Text, nullable=True),
-        Column('answer_content', Text, nullable=True),
-        Column('has_more_answers', Boolean, nullable=True),
-        Column('created_at', DateTime, default=func.now(), nullable=False),  
-        Column('updated_at', DateTime, default=func.now(), onupdate=func.now(), nullable=False),  
-        Column('deleted_at', DateTime, nullable=True),  
-        Column('is_deleted', Boolean, default=False, nullable=False),
-        Column('trackid', NVARCHAR(255), nullable=False),
-    )
-    return research_gate_questions
-
-class ResearchGateQuestionItem(scrapy.Item):
-    title = scrapy.Field()
-    link = scrapy.Field()
-    question_date = scrapy.Field()
-    question_abstract = scrapy.Field()
-    answer_content = scrapy.Field()
-    has_more_answers = scrapy.Field()
 
 class TLSAdapter(HTTPAdapter):
     def __init__(self, tls_version=None, **kwargs):
@@ -83,14 +29,21 @@ class TLSAdapter(HTTPAdapter):
         return super().init_poolmanager(*args, **kwargs)
 
             
-def parse_detail(page):
-    url = f"https://www.researchgate.net:443/search/question?q={keyword.replace(' ','%20')}&page={page}"
-    adapter = TLSAdapter(tls_version=ssl.TLSVersion.TLSv1_3)
-    session = requests.Session()
-    session.mount("https://", adapter)
-    response = session.get(url=url, headers=headers, cookies=cookies)
-    if response.status_code != 200:
-        print('驗證錯誤')
+def parse_detail(page, keyword):
+    max_try_num = 0
+    while True:
+        url = f"https://www.researchgate.net:443/search/question?q={keyword.replace(' ','%20')}&page={page}"
+        adapter = TLSAdapter(tls_version=ssl.TLSVersion.TLSv1_3)
+        session = requests.Session()
+        session.mount("https://", adapter)
+        response = session.get(url=url, headers=headers, cookies=cookies)
+        if max_try_num == 10:
+            print('驗證錯誤：超過最大嘗試')
+            return 
+        if response.status_code != 200:
+            max_try_num += 1
+            continue
+        break
     soup = BeautifulSoup(response.text, 'lxml')
     
     items = []
@@ -149,15 +102,16 @@ def research_question(keywords,cf_clearance, user_agent):
                 'title', 'link', 'question_date', 'question_abstract',
                 'answer_content', 'has_more_answers', 'created_at', 'updated_at'
             ]
+
     with open('research_gate_questions_spider_output.csv', mode='w', newline='', encoding='utf-8') as file:
         writer = csv.DictWriter(file, fieldnames=fieldnames)
         writer.writeheader() #
         for keyword in keywords:
             with ThreadPoolExecutor(max_workers=8) as executor:
                 parse_detail_with_keyword = partial(parse_detail, keyword=keyword)
-                results = executor.map(parse_detail_with_keyword, range(1, 21))
+                results = executor.map(parse_detail_with_keyword, range(1, 11))
             
-            research_gate_questions = defi_talbe()
+            research_gate_questions = defi_research_gate_questions_talbe()
             session = create_session()
             for items in results:
                 for item in items:

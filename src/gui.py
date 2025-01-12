@@ -3,6 +3,7 @@ from tkinter import Button, Entry, IntVar, Label, Radiobutton, StringVar, Tk
 from utils.research_gate_publication_spider import research_publication
 from utils.research_gate_questions_spider import research_question
 
+
 class MyGUI:
     def __init__(self, master):
         self.master = master
@@ -57,10 +58,10 @@ class MyGUI:
 
         if option == 1:
             research_publication(keywords,cf_clearance, user_agent)
-        # elif option == 2:
-        #     research_question(keywords,cf_clearance, user_agent)
-        # else:
-        #     results = "Please select an option."
+        elif option == 2:
+            research_question(keywords,cf_clearance, user_agent)
+        else:
+            results = "Please select an option."
 
         print('已經完成')
         
