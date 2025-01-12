@@ -1,79 +1,20 @@
 import csv
 import datetime
 import ssl
-import urllib.parse
 from concurrent.futures import ThreadPoolExecutor
 from functools import partial
 
 import requests
-import scrapy
 from bs4 import BeautifulSoup
 from dateutil import parser
 from requests.adapters import HTTPAdapter
-from sqlalchemy import (DECIMAL, NVARCHAR, Boolean, Column, Date, DateTime,
-                        Float, Integer, MetaData, String, Table, Text,
-                        create_engine, func, insert)
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy import insert
 
-# 設定資料庫連接資訊
-username = "SA"
-password = "@Bb11033003"  # 包含 @ 符號的密碼
-server_address = "140.118.60.18"
-database_name = "model"
-driver = "ODBC Driver 17 for SQL Server"
+from utils.model import (ResearchGatePublicationItem, create_session,
+                         defi_research_gate_publication_talbe)
 
 cookies = {}
 headers = {}
-
-
-def create_session():
-    username_encoded = urllib.parse.quote_plus(username)
-    password_encoded = urllib.parse.quote_plus(password)
-    driver_encoded = urllib.parse.quote_plus(driver)
-
-    sqlalchemy_connection_string = (
-        f"mssql+pyodbc://{username_encoded}:{password_encoded}@{server_address}/{database_name}"
-        f"?driver={driver_encoded}&encoding=utf8"
-    )
-    engine = create_engine(sqlalchemy_connection_string)
-    SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-    session = SessionLocal()
-    return session
-
-def defi_talbe():
-    Base = declarative_base()
-    metadata = Base.metadata
-    research_gate_publication = Table(
-        'research_gate_publication', metadata,
-        Column('id', Integer, primary_key=True, autoincrement=True),
-        Column('title', NVARCHAR(255), nullable=False),
-        Column('link', Text, nullable=True),
-        Column('year', Integer, nullable=True),
-        Column('publication_type', NVARCHAR(255), nullable=True),
-        Column('publication_date', Date, nullable=True),
-        Column('doi', NVARCHAR(255), nullable=True),
-        Column('abstract', Text, nullable=True),
-        Column('created_at', DateTime, default=func.now(), nullable=False),  
-        Column('updated_at', DateTime, default=func.now(), onupdate=func.now(), nullable=False),  
-        Column('deleted_at', DateTime, nullable=True),  
-        Column('is_deleted', Boolean, default=False, nullable=False),
-        Column('authors', NVARCHAR(255), nullable=True),
-        Column('patent', NVARCHAR(255), nullable=True),
-        Column('trackid', NVARCHAR(255), nullable=True),
-    )
-    return research_gate_publication
-
-class ResearchGatePublicationItem(scrapy.Item):
-    title = scrapy.Field()
-    link = scrapy.Field()
-    year = scrapy.Field()
-    publication_type = scrapy.Field()
-    publication_date = scrapy.Field()
-    doi = scrapy.Field()
-    abstract = scrapy.Field()
-    authors = scrapy.Field()
-    patent = scrapy.Field()
 
 class TLSAdapter(HTTPAdapter):
     def __init__(self, tls_version=None, **kwargs):
@@ -89,13 +30,20 @@ class TLSAdapter(HTTPAdapter):
 
             
 def parse_detail(page,keyword):
-    adapter = TLSAdapter(tls_version=ssl.TLSVersion.TLSv1_3)
-    session = requests.Session()
-    session.mount("https://", adapter)
-    url = f"https://www.researchgate.net:443/search/publication?q={keyword}&page={page}"
-    response = session.get(url, headers=headers, cookies=cookies, timeout=10)
-    if response.status_code != 200:
-        print(f'驗證錯誤response.status_code:{response.status_code}')
+    max_try_num = 0
+    while True:
+        adapter = TLSAdapter(tls_version=ssl.TLSVersion.TLSv1_3)
+        session = requests.Session()
+        session.mount("https://", adapter)
+        url = f"https://www.researchgate.net:443/search/publication?q={keyword}&page={page}"
+        response = session.get(url, headers=headers, cookies=cookies, timeout=10)
+        if max_try_num == 10:
+            print('驗證錯誤：超過最大嘗試')
+            return 
+        if response.status_code != 200:
+            max_try_num += 1
+            continue
+        break
     soup = BeautifulSoup(response.text, 'lxml')
     items = []
     for sing_publications in soup.select('[class="nova-legacy-c-card__body nova-legacy-c-card__body--spacing-inherit"]'):
@@ -179,9 +127,9 @@ def research_publication(keywords,cf_clearance, user_agent):
         for keyword in keywords:
             with ThreadPoolExecutor(max_workers=8) as executor:
                 parse_detail_with_keyword = partial(parse_detail, keyword=keyword)
-                results = executor.map(parse_detail_with_keyword, range(1, 3))
+                results = executor.map(parse_detail_with_keyword, range(1, 11))
             
-            research_gate_publication = defi_talbe()
+            research_gate_publication = defi_research_gate_publication_talbe()
             session = create_session()
             for items in results:
                 for item in items:
@@ -206,11 +154,11 @@ def research_publication(keywords,cf_clearance, user_agent):
             session.close()
 
 
-# if __name__ == '__main__':
-#     # cf_clearance 一定要是經過cloudflare驗證的，如果沒有辦法觸發cloudflare 那就先跑一次
-#     keyword = 'antenna'
-#     cf_clearance = '_FDaXi2lH692S_bFfYWJLRALzHjqTZxILlYHhV5L7kU-1735883763-1.2.1.1-aILIglYP5Ab9xJKs.fWKKyB0kAAbQsH3OJIyq3lr4sbg.PhlPAR18cYDzBdtj5UQf2r27B2Qw3maR3mz.RfhGRpvcMKap08pXazoAM2Y8IkL0ZOOEipzzWYSho1gek6y9xPKpBStoim_wslOK4knbsdeabaQVfuDuHo9S.NKeb9GX9nROuHWSogex6HbTpM5CXP0y7VcsQIFOoNpYsB671GHi9cGQvTpam6XNb6kV6BF9Z9a7kt8S0R3yIkNZGD.SOn36X5rGcUDjprieHhH0ZzAhWmjzs40WdaGvqYQehVyket3a5_aWhoW_eNIk58_AuscAmglHlI2tHlNPnykTqn52nGIXkOTHwjHeCkE7iEXC2NAAGKd4uc75qLaFqI0VXNL8Aj03gRSqrYP8.vGcU45erv7AYqo596yIYamXFOrs2OgGjvUJQ08R1tcM3lv'
-#     user_agent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36'
+if __name__ == '__main__':
+    # cf_clearance 一定要是經過cloudflare驗證的，如果沒有辦法觸發cloudflare 那就先跑一次
+    keyword = 'antenna'
+    cf_clearance = '_FDaXi2lH692S_bFfYWJLRALzHjqTZxILlYHhV5L7kU-1735883763-1.2.1.1-aILIglYP5Ab9xJKs.fWKKyB0kAAbQsH3OJIyq3lr4sbg.PhlPAR18cYDzBdtj5UQf2r27B2Qw3maR3mz.RfhGRpvcMKap08pXazoAM2Y8IkL0ZOOEipzzWYSho1gek6y9xPKpBStoim_wslOK4knbsdeabaQVfuDuHo9S.NKeb9GX9nROuHWSogex6HbTpM5CXP0y7VcsQIFOoNpYsB671GHi9cGQvTpam6XNb6kV6BF9Z9a7kt8S0R3yIkNZGD.SOn36X5rGcUDjprieHhH0ZzAhWmjzs40WdaGvqYQehVyket3a5_aWhoW_eNIk58_AuscAmglHlI2tHlNPnykTqn52nGIXkOTHwjHeCkE7iEXC2NAAGKd4uc75qLaFqI0VXNL8Aj03gRSqrYP8.vGcU45erv7AYqo596yIYamXFOrs2OgGjvUJQ08R1tcM3lv'
+    user_agent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36'
 
     
-#     main()
+    main()
