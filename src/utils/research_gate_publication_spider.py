@@ -9,7 +9,6 @@ from bs4 import BeautifulSoup
 from dateutil import parser
 from requests.adapters import HTTPAdapter
 from sqlalchemy import insert
-
 from utils.model import (ResearchGatePublicationItem, create_session,
                          defi_research_gate_publication_talbe)
 
@@ -39,7 +38,7 @@ def parse_detail(page,keyword):
         response = session.get(url, headers=headers, cookies=cookies, timeout=10)
         if max_try_num == 10:
             print('驗證錯誤：超過最大嘗試')
-            raise 
+            raise ValueError("驗證錯誤：超過最大嘗試")
         if response.status_code != 200:
             max_try_num += 1
             continue
