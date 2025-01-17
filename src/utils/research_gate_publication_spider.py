@@ -39,7 +39,7 @@ def parse_detail(page,keyword):
         response = session.get(url, headers=headers, cookies=cookies, timeout=10)
         if max_try_num == 10:
             print('驗證錯誤：超過最大嘗試')
-            return 
+            raise 
         if response.status_code != 200:
             max_try_num += 1
             continue
@@ -154,11 +154,11 @@ def research_publication(keywords,cf_clearance, user_agent):
             session.close()
 
 
-if __name__ == '__main__':
-    # cf_clearance 一定要是經過cloudflare驗證的，如果沒有辦法觸發cloudflare 那就先跑一次
-    keyword = 'antenna'
-    cf_clearance = '_FDaXi2lH692S_bFfYWJLRALzHjqTZxILlYHhV5L7kU-1735883763-1.2.1.1-aILIglYP5Ab9xJKs.fWKKyB0kAAbQsH3OJIyq3lr4sbg.PhlPAR18cYDzBdtj5UQf2r27B2Qw3maR3mz.RfhGRpvcMKap08pXazoAM2Y8IkL0ZOOEipzzWYSho1gek6y9xPKpBStoim_wslOK4knbsdeabaQVfuDuHo9S.NKeb9GX9nROuHWSogex6HbTpM5CXP0y7VcsQIFOoNpYsB671GHi9cGQvTpam6XNb6kV6BF9Z9a7kt8S0R3yIkNZGD.SOn36X5rGcUDjprieHhH0ZzAhWmjzs40WdaGvqYQehVyket3a5_aWhoW_eNIk58_AuscAmglHlI2tHlNPnykTqn52nGIXkOTHwjHeCkE7iEXC2NAAGKd4uc75qLaFqI0VXNL8Aj03gRSqrYP8.vGcU45erv7AYqo596yIYamXFOrs2OgGjvUJQ08R1tcM3lv'
-    user_agent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36'
+# if __name__ == '__main__':
+#     # cf_clearance 一定要是經過cloudflare驗證的，如果沒有辦法觸發cloudflare 那就先跑一次
+#     keyword = 'antenna'
+#     cf_clearance = '_FDaXi2lH692S_bFfYWJLRALzHjqTZxILlYHhV5L7kU-1735883763-1.2.1.1-aILIglYP5Ab9xJKs.fWKKyB0kAAbQsH3OJIyq3lr4sbg.PhlPAR18cYDzBdtj5UQf2r27B2Qw3maR3mz.RfhGRpvcMKap08pXazoAM2Y8IkL0ZOOEipzzWYSho1gek6y9xPKpBStoim_wslOK4knbsdeabaQVfuDuHo9S.NKeb9GX9nROuHWSogex6HbTpM5CXP0y7VcsQIFOoNpYsB671GHi9cGQvTpam6XNb6kV6BF9Z9a7kt8S0R3yIkNZGD.SOn36X5rGcUDjprieHhH0ZzAhWmjzs40WdaGvqYQehVyket3a5_aWhoW_eNIk58_AuscAmglHlI2tHlNPnykTqn52nGIXkOTHwjHeCkE7iEXC2NAAGKd4uc75qLaFqI0VXNL8Aj03gRSqrYP8.vGcU45erv7AYqo596yIYamXFOrs2OgGjvUJQ08R1tcM3lv'
+#     user_agent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36'
 
     
-    main()
+#     main()
