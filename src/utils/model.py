@@ -3,33 +3,24 @@ import urllib.parse
 
 import scrapy
 from sqlalchemy import (NVARCHAR, Boolean, Column, Date, DateTime, Integer,
-                        Table, Text, create_engine, func)
+                        Table, Text, create_engine, func, String, Enum)
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
+from utils.config import get_config
 
-# 設定資料庫連接資訊
-username = "SA"
-password = "@Bb11033003"  # 包含 @ 符號的密碼
-server_address = "140.118.60.18"
-database_name = "model"
-driver = "ODBC Driver 17 for SQL Server"
+# 獲取配置
+config = get_config()
 
 
 def create_session():
-    username_encoded = urllib.parse.quote_plus(username)
-    password_encoded = urllib.parse.quote_plus(password)
-    driver_encoded = urllib.parse.quote_plus(driver)
 
-    sqlalchemy_connection_string = (
-        f"mssql+pyodbc://{username_encoded}:{password_encoded}@{server_address}/{database_name}"
-        f"?driver={driver_encoded}&encoding=utf8"
-    )
+    sqlalchemy_connection_string = config.SQLALCHEMY_DATABASE_URL
     engine = create_engine(sqlalchemy_connection_string)
     SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
     session = SessionLocal()
     return session
 
-def defi_research_gate_publication_talbe():
+def defi_research_gate_publication_table():
     Base = declarative_base()
     metadata = Base.metadata
     research_gate_publication = Table(
@@ -52,7 +43,7 @@ def defi_research_gate_publication_talbe():
     )
     return research_gate_publication
 
-def defi_research_gate_questions_talbe():
+def defi_research_gate_questions_table():
     Base = declarative_base()
     metadata = Base.metadata
     research_gate_questions = Table(
@@ -71,6 +62,28 @@ def defi_research_gate_questions_talbe():
         Column('trackid', NVARCHAR(255), nullable=False),
     )
     return research_gate_questions
+
+def defi_search_history_table():
+    Base = declarative_base()
+    metadata = Base.metadata
+    search_history = Table(
+        'search_history', metadata,
+        Column('id', Integer, primary_key=True, autoincrement=True),
+        Column('user_id', String(255)),
+        Column('username', String(255)),
+        Column('trackid', String(255)),
+        Column('function_name', NVARCHAR(255), nullable=False),
+        Column('keyword', NVARCHAR(None)),
+        Column('keyword_type', NVARCHAR(255)),
+        Column('status', Enum('In Progress', 'Success', 'Failure', name='status_enum'), nullable=False),
+        Column('start_date', DateTime),
+        Column('end_date', DateTime),
+        Column('other', NVARCHAR(255)),
+        Column('created_at', DateTime, default=func.now(), nullable=False),
+        Column('updated_at', DateTime, default=func.now(), onupdate=func.now(), nullable=False),
+        Column('is_deleted', Boolean, default=False, nullable=False)
+        )
+    return search_history
 
 class ResearchGatePublicationItem(scrapy.Item):
     title = scrapy.Field()

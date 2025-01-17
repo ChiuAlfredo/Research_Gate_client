@@ -1,16 +1,19 @@
 import csv
 import datetime
 import ssl
+import uuid
 from concurrent.futures import ThreadPoolExecutor
 from functools import partial
+from typing import Optional
 
 import requests
 from bs4 import BeautifulSoup
 from dateutil import parser
 from requests.adapters import HTTPAdapter
-from sqlalchemy import insert
+from sqlalchemy import func, insert
 from utils.model import (ResearchGatePublicationItem, create_session,
-                         defi_research_gate_publication_talbe)
+                         defi_research_gate_publication_table,
+                         defi_search_history_table)
 
 cookies = {}
 headers = {}
@@ -110,8 +113,65 @@ def parse_date(date_str):
         print(f"Error parsing date '{date_str}': {str(e)}")
         return None
     
-def research_publication(keywords,cf_clearance, user_agent):   
+def log_search_history(
+    trackid: str,
+    function_name: str,
+    keyword: str,
+    keyword_type: str,
+    status: str,
+    other: Optional[str] = None,
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None
+) -> None:
+    """
+    在 search_history 資料表中新增一筆查詢紀錄。
+
+    :param trackid: 查詢追蹤 ID
+    :param user_name: 用戶名稱
+    :param user_id: 用戶 ID
+    :param function_name: 功能名稱
+    :param keyword: 查詢關鍵字
+    :param keyword_type: 關鍵字類型
+    :param status: 查詢結果狀態
+    :param other: 其他補充資訊（可選）
+    :param start_date: 用戶查詢的開始時間（可選）
+    :param end_date: 用戶查詢的結束時間（可選）
+    """
+    try:
+        # 獲取資料表和會話
+        search_history_table = defi_search_history_table()
+        session = create_session()
+
+        # 建立插入語句
+        stmt = insert(search_history_table).values(
+            trackid=trackid,
+            function_name=function_name,
+            keyword=keyword,
+            keyword_type=keyword_type,
+            status=status,
+            other=other,
+            start_date=start_date,
+            end_date=end_date,
+            created_at=func.now(),  # 記錄創建時間
+            updated_at=func.now()   # 記錄最後更新時間
+        )
+
+        # 執行插入操作
+        session.execute(stmt)
+        session.commit()
+
+    except Exception as e:
+        # 捕捉錯誤並記錄日誌
+        raise
+
+    finally:
+        # 確保關閉會話
+        session.close()
+
+def research_publication(keywords,cf_clearance, user_agent):
     global cookies, headers
+
+    
 
     cookies = {"cf_clearance":cf_clearance}
     headers = {"User-Agent":user_agent}
@@ -124,11 +184,20 @@ def research_publication(keywords,cf_clearance, user_agent):
         writer.writeheader()
         
         for keyword in keywords:
+            trackid = uuid.uuid1().hex
+            log_search_history(
+                trackid=trackid,
+                function_name="research-gate-publication",
+                keyword=keywords,
+                keyword_type="AND",
+                status="In Progress",
+                other=None,
+            )
             with ThreadPoolExecutor(max_workers=8) as executor:
                 parse_detail_with_keyword = partial(parse_detail, keyword=keyword)
                 results = executor.map(parse_detail_with_keyword, range(1, 11))
             
-            research_gate_publication = defi_research_gate_publication_talbe()
+            research_gate_publication = defi_research_gate_publication_table()
             session = create_session()
             for items in results:
                 for item in items:
