@@ -114,15 +114,15 @@ def parse_date(date_str):
         return None
     
 def log_search_history(
-    trackid: str,
-    function_name: str,
-    keyword: str,
-    keyword_type: str,
-    status: str,
-    other: Optional[str] = None,
-    start_date: Optional[str] = None,
-    end_date: Optional[str] = None
-) -> None:
+        trackid: str,
+        function_name: str,
+        keyword: str,
+        keyword_type: str,
+        status: str,
+        other: Optional[str] = None,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None
+    ) -> None:
     """
     在 search_history 資料表中新增一筆查詢紀錄。
 
@@ -170,8 +170,6 @@ def log_search_history(
 
 def research_publication(keywords,cf_clearance, user_agent):
     global cookies, headers
-
-    
 
     cookies = {"cf_clearance":cf_clearance}
     headers = {"User-Agent":user_agent}
@@ -222,11 +220,10 @@ def research_publication(keywords,cf_clearance, user_agent):
             session.close()
 
 
-# if __name__ == '__main__':
-#     # cf_clearance 一定要是經過cloudflare驗證的，如果沒有辦法觸發cloudflare 那就先跑一次
-#     keyword = 'antenna'
-#     cf_clearance = '_FDaXi2lH692S_bFfYWJLRALzHjqTZxILlYHhV5L7kU-1735883763-1.2.1.1-aILIglYP5Ab9xJKs.fWKKyB0kAAbQsH3OJIyq3lr4sbg.PhlPAR18cYDzBdtj5UQf2r27B2Qw3maR3mz.RfhGRpvcMKap08pXazoAM2Y8IkL0ZOOEipzzWYSho1gek6y9xPKpBStoim_wslOK4knbsdeabaQVfuDuHo9S.NKeb9GX9nROuHWSogex6HbTpM5CXP0y7VcsQIFOoNpYsB671GHi9cGQvTpam6XNb6kV6BF9Z9a7kt8S0R3yIkNZGD.SOn36X5rGcUDjprieHhH0ZzAhWmjzs40WdaGvqYQehVyket3a5_aWhoW_eNIk58_AuscAmglHlI2tHlNPnykTqn52nGIXkOTHwjHeCkE7iEXC2NAAGKd4uc75qLaFqI0VXNL8Aj03gRSqrYP8.vGcU45erv7AYqo596yIYamXFOrs2OgGjvUJQ08R1tcM3lv'
-#     user_agent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36'
+if __name__ == '__main__':
+    # cf_clearance 一定要是經過cloudflare驗證的，如果沒有辦法觸發cloudflare 那就先跑一次
+    keyword = 'antenna'
+    cf_clearance = 'Pot4UL.UrbDm3QbbsYO3Jwqi.eLlHtw478OWExvuJJ4-1737131813-1.2.1.1-K7Ios_1rLObySfdl9fDOmcXCfR.t_UkCjaPoHgUazOZglTSxSMD4TeIVS.BVeuDHM7vXNrsvihgw3VpVZFhxVXzK5Zx3SOb8JTupAY_.ezCg6a7wEE5YbHJD_BlLrFwPwLampHwUB6e_lbNVfUfsJNnHzC1BFj.2fn1Ok2pnlSnUc6wFbk2fZaPaVUncEH.vSESCdwFenVgADhpiuKDFR3zOglCpCDEnNu7GO9ESmN0m9HT9pBUm6VJjOGpoRQlM3jpwIkBf9AX24VwbOUfFMEGtmsUW1FW8LV3jb3bMSBpfubZ8c1qBl9SFnr5PJThbqukGOPAG4LEg0Y.MYuML6g'
+    user_agent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36'
+    research_publication(keyword, cf_clearance, user_agent)
 
-    
-#     main()
