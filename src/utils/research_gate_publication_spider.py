@@ -1,19 +1,20 @@
 import csv
 import datetime
 import ssl
+import uuid
 from concurrent.futures import ThreadPoolExecutor
 from functools import partial
+from typing import Optional
 
 import requests
 from bs4 import BeautifulSoup
 from dateutil import parser
 from requests.adapters import HTTPAdapter
-from sqlalchemy import insert, func
+from sqlalchemy import func, insert
 
 from utils.model import (ResearchGatePublicationItem, create_session,
-                         defi_research_gate_publication_table, defi_search_history_table)
-from typing import Optional
-import uuid
+                         defi_research_gate_publication_table,
+                         defi_search_history_table)
 
 cookies = {}
 headers = {}
@@ -39,9 +40,9 @@ def parse_detail(page,keyword):
         session.mount("https://", adapter)
         url = f"https://www.researchgate.net:443/search/publication?q={keyword}&page={page}"
         response = session.get(url, headers=headers, cookies=cookies, timeout=10)
-        if max_try_num == 10:
+        if max_try_num == 50:
             print('驗證錯誤：超過最大嘗試')
-            return 
+            raise ValueError("驗證錯誤：超過最大嘗試")
         if response.status_code != 200:
             max_try_num += 1
             continue
@@ -86,11 +87,11 @@ def get_publication_detail(session, title, link, publication_type):
     item['abstract'] = abstract
     item['authors'] = authors
     if publication_type == 'Article':
-        doi = detail_soup[1].text if len(detail_soup) > 2 else ''
+        doi = detail_soup[1].text if len(detail_soup) >= 2 else ''
         item['doi'] = doi
         item['patent'] = ''
     elif publication_type == 'Patent':
-        patent = detail_soup[2].text if len(detail_soup) > 2 else ''
+        patent = detail_soup[2].text if len(detail_soup) >= 2 else ''
         item['doi'] = ''
         item['patent'] = patent
     else:  # 預設處理 Preprint 和未知類型
@@ -114,15 +115,15 @@ def parse_date(date_str):
         return None
     
 def log_search_history(
-    trackid: str,
-    function_name: str,
-    keyword: str,
-    keyword_type: str,
-    status: str,
-    other: Optional[str] = None,
-    start_date: Optional[str] = None,
-    end_date: Optional[str] = None
-) -> None:
+        trackid: str,
+        function_name: str,
+        keyword: str,
+        keyword_type: str,
+        status: str,
+        other: Optional[str] = None,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None
+    ) -> None:
     """
     在 search_history 資料表中新增一筆查詢紀錄。
 
@@ -170,8 +171,6 @@ def log_search_history(
 
 def research_publication(keywords,cf_clearance, user_agent):
     global cookies, headers
-
-    
 
     cookies = {"cf_clearance":cf_clearance}
     headers = {"User-Agent":user_agent}
