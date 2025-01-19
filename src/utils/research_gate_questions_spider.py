@@ -175,7 +175,7 @@ def research_question(keywords,cf_clearance, user_agent,trackid):
         writer = csv.DictWriter(file, fieldnames=fieldnames)
         writer.writeheader() #
 
-        with ThreadPoolExecutor(max_workers=1) as executor:
+        with ThreadPoolExecutor(max_workers=4) as executor:
             parse_detail_with_keyword = partial(parse_detail, keyword=keywords)
             results = executor.map(parse_detail_with_keyword, range(1, 11))
         

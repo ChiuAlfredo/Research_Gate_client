@@ -68,7 +68,8 @@ def get_publication_detail(session, title, link, publication_type):
         '[class="nova-legacy-v-person-list-item__align"] [class="nova-legacy-e-text nova-legacy-e-text--size-m nova-legacy-e-text--family-display nova-legacy-e-text--spacing-none nova-legacy-e-text--color-inherit nova-legacy-v-person-list-item__title"]')])
     abstract_elements = soup.select(
         '[class="nova-legacy-e-text nova-legacy-e-text--size-m nova-legacy-e-text--family-sans-serif nova-legacy-e-text--spacing-none nova-legacy-e-text--color-grey-800 research-detail-middle-section__abstract"]')
-    abstract = ','.join(element.get_text(strip=True) for element in abstract_elements.select('[class="Linkify"] div')) if abstract_elements.select('[class="Linkify"] div') else ''
+    
+    abstract = ','.join(element.get_text(strip=True) for element in abstract_elements) if abstract_elements else ''
         
     # 確保 detail_soup 存在並提取 publication_date 和 year
     if detail_soup and len(detail_soup) > 0:
@@ -197,7 +198,7 @@ def research_publication(keywords,cf_clearance, user_agent,trackid):
 
         with ThreadPoolExecutor(max_workers=8) as executor:
             parse_detail_with_keyword = partial(parse_detail, keyword=keywords)
-            results = executor.map(parse_detail_with_keyword, range(1, 11))
+            results = executor.map(parse_detail_with_keyword, range(1, 101))
         
         research_gate_publication = defi_research_gate_publication_table()
         session = create_session()
