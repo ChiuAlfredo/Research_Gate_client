@@ -40,9 +40,9 @@ def parse_detail(page,keyword):
         session.mount("https://", adapter)
         url = f"https://www.researchgate.net:443/search/publication?q={keyword}&page={page}"
         response = session.get(url, headers=headers, cookies=cookies, timeout=10)
-        if max_try_num == 10:
+        if max_try_num == 50:
             print('驗證錯誤：超過最大嘗試')
-            return 
+            raise ValueError("驗證錯誤：超過最大嘗試")
         if response.status_code != 200:
             max_try_num += 1
             continue
@@ -115,15 +115,15 @@ def parse_date(date_str):
         return None
     
 def log_search_history(
-    trackid: str,
-    function_name: str,
-    keyword: str,
-    keyword_type: str,
-    status: str,
-    other: Optional[str] = None,
-    start_date: Optional[str] = None,
-    end_date: Optional[str] = None
-) -> None:
+        trackid: str,
+        function_name: str,
+        keyword: str,
+        keyword_type: str,
+        status: str,
+        other: Optional[str] = None,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None
+    ) -> None:
     """
     在 search_history 資料表中新增一筆查詢紀錄。
 
@@ -171,8 +171,6 @@ def log_search_history(
 
 def research_publication(keywords,cf_clearance, user_agent):
     global cookies, headers
-
-    
 
     cookies = {"cf_clearance":cf_clearance}
     headers = {"User-Agent":user_agent}
@@ -231,10 +229,3 @@ def research_publication(keywords,cf_clearance, user_agent):
 
     
 #     main()
-import requests
-
-burp0_url = "https://www.researchgate.net/publication/335116843_A_7-GHz_Fast-Lock_Two-Step_Time-to-Digital_Converter-Based_All-Digital_DLL"
-burp0_cookies = {"__cf_bm": "QcwT2fxhgZWlJzv0v8oIRVBQfDi1hp8r1qKmSvn7ztw-1737300294-1.0.1.1-WxHIYfeZWNWE6Td6OWWGw8lomc4Al8QzsBKn6c_hnBqnRpuI52h_7EVoppfqFKTMQesXwbLgc.sEn.LY69f0IA", "cirgu": "_1_TZZ%2FcXCFiEmNs4pigbebX0e1DtbSQHNvjbuawT0LITA0co%2FWmSX8u8cx3lBk0wMWhh4s", "did": "eaOOE0wZD0GBuWNLzjQlbgwzXK18jucWAP3I1fAFJvNRSXKz0Y0eLZHOrXVYxpQO", "ptc": "RG1.7598713900902995424.1737222545", "_cfuvid": "FM.dfWWStkUDhsgMY6Ru0JkIvcRhz8rd54gIvcDk8f4-1737300294562-0.0.1.1-604800000", "_gid": "GA1.2.92274840.1737300291", "_gat": "1", "cf_clearance": "gbze_CvCiolQgc2XMzwdktWY2GIPWY9CWDaadhNV_mE-1737300295-1.2.1.1-sPb9d9yoZ8vi_rhYzc03IZyIvd.BxewoQx_qHVXz0pTjFpWyfg.ArzmlsI9H3Dy9qOen8iTcxhLhpQfyxEWe2QHxLy5ZxsohmljbZWDlDAPSDbFL3zPnNap0tehtSrm9V7TFr1JL.ROXkekmnHqhMu0kSYUc.bjbO7idmB4gqnUClNEavMeGuDRTaZh7IuXPjQvtzkobNUWa1ZBcKztJTFI59dwuYqdq5qMfyZ4H0XZDQNS4x6SljZRYdc2gRxXZa1keSflyY8aD_aJ0FOFi.mjQp.pAwYd9bW9xV4IQrGMoTF.bDDFVcI8I_Dt5J8Y3v2to_aga7CdDyeCtZMQR9A", "_gat_UA-58591210-1": "1", "__gads": "ID=ee8b011769620250:T=1737300300:RT=1737300300:S=ALNI_Mawmuupr1k3KRysQgNc0SsU7Y2s3g", "__gpi": "UID=00000ff24b9cc12b:T=1737300300:RT=1737300300:S=ALNI_Mbz0deueC3bcJ6wEFIaR-EP0W7TUA", "__eoi": "ID=d40d07aa6a4ff530:T=1737300300:RT=1737300300:S=AA-Afjba1iqXa-VysfdnHae3t_qT", "_dc_gtm_UA-58591210-1": "1", "sid": "SILArJY42j0XSsKAdMv4PQTCkxb0iNOJ805gofpYi8hfz6DLp6X2OKKPy7XEWDALHf7l5OKzuzLkJNPsUGowoEK5ywuLhmeQNv14zANVGca50vRKGARZYxIipJK9kgtw", "isInstIp": "false", "hasPdpNext": "false", "_ga_4P31SJ70EJ": "GS1.1.1737299531.17.1.1737300302.0.0.0", "_ga": "GA1.2.680663890.1737300291", "_pbjs_userid_consent_data": "3524755945110770", "_lr_retry_request": "true", "_lr_env_src_ats": "false", "pbjs-unifiedid": "%7B%22TDID%22%3A%2241fd784c-0db2-44f4-8401-9b6512f837da%22%2C%22TDID_LOOKUP%22%3A%22TRUE%22%2C%22TDID_CREATED_AT%22%3A%222024-12-19T15%3A25%3A15%22%7D", "pbjs-unifiedid_last": "Sun%2C%2019%20Jan%202025%2015%3A25%3A11%20GMT", "panoramaId_expiry": "1737905116547", "_cc_id": "5653871c5b5a5512ff8d8bb16cd50f89", "panoramaId": "eb07f370cce381acfe7d45607de1185ca02ceef33b264cf566eb21c5ca636125", "ph_phc_ma1XTQyee96N1GML6qUTgLQRiDifnRcE9STiHTZ0CfZ_posthog": "%7B%22distinct_id%22%3A%2201947f2a-c660-7caf-b826-1c4dd56ae2f8%22%2C%22%24sesid%22%3A%5B1737300327203%2C%2201947f2a-c663-791d-b1f1-f241a61d1a15%22%2C1737300297315%5D%2C%22%24initial_person_info%22%3A%7B%22r%22%3A%22https%3A%2F%2Fwww.researchgate.net%2Fpublication%2F367263856_Solder_Joint_Reliability_Assessment_on_FO-CSP_for_Next_Generation_DDR6%3F__cf_chl_tk%3DD5SncsSqlDhqeBpg3LCatOFUvug3Ea.6XrcxG4IqHCQ-1737300273-1.0.1.1-Pzvfr2mBtGdeAR8Tsw_o8WkU9U._WX69PHQGOn9jdsg%22%2C%22u%22%3A%22https%3A%2F%2Fwww.researchgate.net%2Fpublication%2F367263856_Solder_Joint_Reliability_Assessment_on_FO-CSP_for_Next_Generation_DDR6%22%7D%7D"}
-burp0_headers = {"Cache-Control": "max-age=0", "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.6778.140 Safari/537.36", "Accept-Language": "en-US,en;q=0.9", "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7", "Upgrade-Insecure-Requests": "1", "X-Entry-Page": "", "X-Rg-Referrer": "", "Sec-Fetch-Site": "same-origin", "Sec-Fetch-Mode": "same-origin", "Sec-Fetch-Dest": "empty", "Referer": "https://www.researchgate.net/publication/lite.worker.js", "Accept-Encoding": "gzip, deflate, br", "Priority": "u=0, i"}
-response = session.get(burp0_url, headers=burp0_headers, cookies=burp0_cookies, timeout=10)
-        
