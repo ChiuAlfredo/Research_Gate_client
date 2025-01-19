@@ -1,8 +1,8 @@
-from tkinter import Button, Entry, IntVar, Label, Radiobutton, StringVar, Tk
+from tkinter import Button, Entry, IntVar, Label, Radiobutton, StringVar, Tk, messagebox
 
-from utils.research_gate_publication_spider import research_publication
-from utils.research_gate_questions_spider import research_question
-
+from utils.research_gate_publication_spider import research_publication,write_history_pub
+from utils.research_gate_questions_spider import research_question,write_history_que
+import uuid
 
 class MyGUI:
     def __init__(self, master):
@@ -46,22 +46,51 @@ class MyGUI:
         self.submit_button = Button(master, text="Submit", command=self.submit)
         self.submit_button.pack(pady=20)
 
-    def submit(self):
-        keywords = self.keyword_var.get().strip()
-        cf_clearance = self.cf_clearance_var.get().strip()
-        user_agent = self.user_agent_var.get().strip()
-        option = self.option_var.get()
-        
-        print(keywords)
-        print(cf_clearance)
-        print(user_agent)
-
-        if option == 1:
-            research_publication(keywords,cf_clearance, user_agent)
-        elif option == 2:
-            research_question(keywords,cf_clearance, user_agent)
+    def show_message(self, message, error=True):
+        if error:
+            messagebox.showerror("Error", message)
         else:
-            results = "Please select an option."
+            messagebox.showinfo("Info", message)
 
-        print('已經完成')
-        
+    def submit(self):
+        try:
+            keywords = self.keyword_var.get().strip()
+            cf_clearance = self.cf_clearance_var.get().strip()
+            user_agent = self.user_agent_var.get().strip()
+            option = self.option_var.get()
+            
+            # Validate inputs
+            if not keywords:
+                self.show_message("Please enter keywords")
+                return
+            if not cf_clearance:
+                self.show_message("Please enter CF Clearance")
+                return
+            if not user_agent:
+                self.show_message("Please enter User Agent")
+                return
+
+            if option == 1:
+                try:
+                    trackid = uuid.uuid1().hex
+                    research_publication(keywords, cf_clearance, user_agent,trackid)
+                    self.show_message("Publication search completed successfully!", False)
+                    write_history_pub(keywords,trackid)
+                except Exception as e:
+                    self.show_message(f"Error in question search: {str(e)}")
+
+            elif option == 2:
+                try:
+                    trackid = uuid.uuid1().hex
+                    research_question(keywords, cf_clearance, user_agent,trackid)
+                    self.show_message("Question search completed successfully!", False)
+                    write_history_que(keywords,trackid)
+                except Exception as e:
+                    self.show_message(f"Error in question search: {str(e)}")
+            else:
+                self.show_message("Please select an option")
+                
+        except Exception as e:
+            error_message = f"An error occurred: {str(e)}"
+            self.show_message(error_message)
+            messagebox.showerror("Error", error_message)

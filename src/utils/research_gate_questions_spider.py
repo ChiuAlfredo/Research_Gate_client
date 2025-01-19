@@ -40,8 +40,7 @@ def parse_detail(page, keyword):
         session.mount("https://", adapter)
         response = session.get(url=url, headers=headers, cookies=cookies)
         if max_try_num == 10:
-            print('驗證錯誤：超過最大嘗試')
-            return 
+            raise Exception('驗證錯誤：超過最大嘗試')
         if response.status_code != 200:
             max_try_num += 1
             continue
@@ -148,52 +147,60 @@ def log_search_history(
     finally:
         # 確保關閉會話
         session.close()
+
+def write_history_que(keywords,trackid):
+
+    log_search_history(
+        trackid=trackid,
+        function_name="research-gate-question",
+        keyword=keywords,
+        keyword_type="AND",
+        status="Success",
+        other=None,
+    )
+
     
-def research_question(keywords,cf_clearance, user_agent):
+def research_question(keywords,cf_clearance, user_agent,trackid):
     global cookies, headers
     cookies = {"cf_clearance":cf_clearance}
     headers = {"User-Agent":user_agent}
     
     fieldnames = [
                 'title', 'link', 'question_date', 'question_abstract',
-                'answer_content', 'has_more_answers', 'created_at', 'updated_at'
+                'answer_content', 'has_more_answers', 'created_at', 'updated_at','trackid'
             ]
 
     with open('research_gate_questions_spider_output.csv', mode='w', newline='', encoding='utf-8') as file:
         writer = csv.DictWriter(file, fieldnames=fieldnames)
         writer.writeheader() #
-        for keyword in keywords:
-            trackid = uuid.uuid1().hex
-            log_search_history(
-                trackid=trackid,
-                function_name="research-gate-questions",
-                keyword=keywords,
-                keyword_type="AND",
-                status="Success",
-            )
-            with ThreadPoolExecutor(max_workers=8) as executor:
-                parse_detail_with_keyword = partial(parse_detail, keyword=keyword)
-                results = executor.map(parse_detail_with_keyword, range(1, 11))
+
+        with ThreadPoolExecutor(max_workers=1) as executor:
+            parse_detail_with_keyword = partial(parse_detail, keyword=keywords)
+            results = executor.map(parse_detail_with_keyword, range(1, 11))
+        
+        research_gate_questions = defi_research_gate_questions_table()
+        session = create_session()
+        for items in results:
+            for item in items:
+                ResearchGateQuestionPipelinetion_data = {
+                    'title': item.get('title'),
+                    'link': item.get('link'),
+                    'question_date': parse_date(item.get('question_date')),
+                    'question_abstract': item.get('question_abstract'),
+                    'answer_content': ' | '.join(item.get('answer_content', [])),
+                    'has_more_answers': item.get('has_more_answers', False),  # 預設 patent 為空字符串
+                    'created_at': datetime.datetime.now(),
+                    'updated_at': datetime.datetime.now(),
+                    'trackid': trackid,
+                }
+                print(ResearchGateQuestionPipelinetion_data)
+                writer.writerow(ResearchGateQuestionPipelinetion_data)
+                # 將數據插入資料庫
+                session.execute(insert(research_gate_questions).values(ResearchGateQuestionPipelinetion_data))
+                session.commit()
+        
+        session.close()
             
-            research_gate_questions = defi_research_gate_questions_table()
-            session = create_session()
-            for items in results:
-                for item in items:
-                    ResearchGateQuestionPipelinetion_data = {
-                        'title': item.get('title'),
-                        'link': item.get('link'),
-                        'question_date': parse_date(item.get('question_date')),
-                        'question_abstract': item.get('question_abstract'),
-                        'answer_content': ' | '.join(item.get('answer_content', [])),
-                        'has_more_answers': item.get('has_more_answers', False),  # 預設 patent 為空字符串
-                        'created_at': datetime.datetime.now(),
-                        'updated_at': datetime.datetime.now(),
-                    }
-                    writer.writerow(ResearchGateQuestionPipelinetion_data)
-                    # 將數據插入資料庫
-                    session.execute(insert(research_gate_questions).values(ResearchGateQuestionPipelinetion_data))
-                    session.commit()
-            session.close()
 
 
 # if __name__ == '__main__':
