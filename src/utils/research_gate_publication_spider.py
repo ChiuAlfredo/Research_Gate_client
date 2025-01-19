@@ -11,6 +11,7 @@ from bs4 import BeautifulSoup
 from dateutil import parser
 from requests.adapters import HTTPAdapter
 from sqlalchemy import func, insert
+
 from utils.model import (ResearchGatePublicationItem, create_session,
                          defi_research_gate_publication_table,
                          defi_search_history_table)
@@ -39,7 +40,7 @@ def parse_detail(page,keyword):
         session.mount("https://", adapter)
         url = f"https://www.researchgate.net:443/search/publication?q={keyword}&page={page}"
         response = session.get(url, headers=headers, cookies=cookies, timeout=10)
-        if max_try_num == 10:
+        if max_try_num == 50:
             print('驗證錯誤：超過最大嘗試')
             raise ValueError("驗證錯誤：超過最大嘗試")
         if response.status_code != 200:
@@ -223,7 +224,29 @@ def research_publication(keywords,cf_clearance, user_agent):
 if __name__ == '__main__':
     # cf_clearance 一定要是經過cloudflare驗證的，如果沒有辦法觸發cloudflare 那就先跑一次
     keyword = 'antenna'
-    cf_clearance = 'Pot4UL.UrbDm3QbbsYO3Jwqi.eLlHtw478OWExvuJJ4-1737131813-1.2.1.1-K7Ios_1rLObySfdl9fDOmcXCfR.t_UkCjaPoHgUazOZglTSxSMD4TeIVS.BVeuDHM7vXNrsvihgw3VpVZFhxVXzK5Zx3SOb8JTupAY_.ezCg6a7wEE5YbHJD_BlLrFwPwLampHwUB6e_lbNVfUfsJNnHzC1BFj.2fn1Ok2pnlSnUc6wFbk2fZaPaVUncEH.vSESCdwFenVgADhpiuKDFR3zOglCpCDEnNu7GO9ESmN0m9HT9pBUm6VJjOGpoRQlM3jpwIkBf9AX24VwbOUfFMEGtmsUW1FW8LV3jb3bMSBpfubZ8c1qBl9SFnr5PJThbqukGOPAG4LEg0Y.MYuML6g'
+    cf_clearance = '7IHEEq2L47M9f8UOHtVcUu2Ln5ICSmiZjmERCruCWSU-1737210157-1.2.1.1-FbvS5QMgz0HcB9UupG9kWugdcLB8bAjxMQ0Pwh4t5WzjsF6RS7eHLU1WkvfTB6lKmF3sj2lyM.7ojm8C2SwWvNecyJBJgNsQnhRtIj2QwHKQRye92LM0vKRiIpXWTDq6qRpY_.2IsO3DOnoFhseaMiPWALAYLtnP9O1LizXfw5XS_LNjZ9gNDa98ED.OD7_tE0wkjbbi3LQy2d.FfTlmQC.klyaMmveGQCMpXrfFeqfWkKq0O2odfdFpKp_ZxeGFOWbWRom.rM5ivpFlPVOvfRB4ZK2yDoUMdMW9VH.GI7uL.vI8su_Ae2CU_6wZRL4PWfdF5sjMoTWyo68RKK4VvA'
     user_agent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36'
     research_publication(keyword, cf_clearance, user_agent)
 
+    cookies = {"cf_clearance":cf_clearance}
+    headers = {"User-Agent":user_agent}
+    adapter = TLSAdapter(tls_version=ssl.TLSVersion.TLSv1_3)
+    session = requests.Session()
+    session.mount("https://", adapter)
+    page=0
+    burp0_url = f"https://www.researchgate.net:443/search/publication?q={keyword}&page={page}"
+    response = session.get(burp0_url, headers=headers, cookies=cookies, timeout=10)
+    response
+    
+    import requests
+
+    burp0_url = "https://www.researchgate.net:443/publication/302604449_Mother_and_daughter_board_configuration_to_improve_current_and_voltage_capabilities_of_a_power_instrument"
+    burp0_cookies = {"cf_clearance": "TkSFtqBk6Mv.hGYcvIHjJc3N8wB.mQz7tsY5ltA85Gs-1737222555-1.2.1.1-H0GZ63BWALuaEnkklSSNnHrCfZNGMysN7weckeEi12BknQvM6h_oHc9gFJ9K6p53i7_oPGNPbJwYIk7s6BuZCyENO8C6hJaEUVgiu1TeHrenHjR9UFVlhAVGgFO05stvUXIXNcjD.T081MD6iIOx1h5IRylefNXunJCa0cBLpJ8ks9d2mqvOEx8g5t_rMFHTDi5pcnc3dKLdB7vYAYakT3rpR4lMW_SFa6bs4lzRmdKJpn8_4ZQ1ZZAEHarqbJcgGK9NapCHhcwy1l2wfaokcHRHvsGHgiqXo7d5H9eVT0vRkFFJnvatLdQEWI9CgjModXFuAnUxGtmPPlU0HpvRJw"}
+    burp0_headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.6778.140 Safari/537.36"}
+    adapter = TLSAdapter(tls_version=ssl.TLSVersion.TLSv1_3)
+    session = requests.Session()
+    session.mount("https://", adapter)
+    response = session.get(burp0_url, headers=burp0_headers, cookies=burp0_cookies, timeout=10)
+    response
+    
+    
