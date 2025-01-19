@@ -40,8 +40,7 @@ def parse_detail(page,keyword):
         url = f"https://www.researchgate.net:443/search/publication?q={keyword}&page={page}"
         response = session.get(url, headers=headers, cookies=cookies, timeout=10)
         if max_try_num == 10:
-            print('驗證錯誤：超過最大嘗試')
-            return 
+            raise Exception('驗證錯誤：超過最大嘗試')
         if response.status_code != 200:
             max_try_num += 1
             continue
@@ -167,8 +166,19 @@ def log_search_history(
     finally:
         # 確保關閉會話
         session.close()
+def write_history_pub(keywords,trackid):
 
-def research_publication(keywords,cf_clearance, user_agent):
+    log_search_history(
+        trackid=trackid,
+        function_name="research-gate-publication",
+        keyword=keywords,
+        keyword_type="AND",
+        status="Success",
+        other=None,
+    )
+
+
+def research_publication(keywords,cf_clearance, user_agent,trackid):
     global cookies, headers
 
     
@@ -177,50 +187,42 @@ def research_publication(keywords,cf_clearance, user_agent):
     headers = {"User-Agent":user_agent}
     fieldnames = [
                 'title', 'link', 'year', 'publication_type', 'publication_date',
-                'doi', 'abstract', 'authors', 'patent', 'created_at', 'updated_at'
+                'doi', 'abstract', 'authors', 'patent', 'created_at', 'updated_at','trackid'
             ]
     with open('research_gate_publication_spider_output.csv', mode='w', newline='', encoding='utf-8') as file:
         writer = csv.DictWriter(file, fieldnames=fieldnames)
         writer.writeheader()
         
-        for keyword in keywords:
-            trackid = uuid.uuid1().hex
-            log_search_history(
-                trackid=trackid,
-                function_name="research-gate-publication",
-                keyword=keywords,
-                keyword_type="AND",
-                status="Success",
-                other=None,
-            )
-            with ThreadPoolExecutor(max_workers=8) as executor:
-                parse_detail_with_keyword = partial(parse_detail, keyword=keyword)
-                results = executor.map(parse_detail_with_keyword, range(1, 11))
-            
-            research_gate_publication = defi_research_gate_publication_table()
-            session = create_session()
-            for items in results:
-                for item in items:
-                    publication_data = {
-                        'title': item.get('title'),
-                        'link': item.get('link'),
-                        'year': item.get('year'),
-                        'publication_type': item.get('publication_type'),
-                        'publication_date': parse_date(item.get('publication_date')),
-                        'doi': item.get('doi', ''),  # 預設 DOI 為空字符串
-                        'abstract': item.get('abstract'),
-                        'authors': item.get('authors'),
-                        'patent': item.get('patent', ''),  # 預設 patent 為空字符串
-                        'created_at': datetime.datetime.now(),
-                        'updated_at': datetime.datetime.now(),
-                    }
-                    print(publication_data)
-                    writer.writerow(publication_data)
-                    # 將數據插入資料庫
-                    session.execute(insert(research_gate_publication).values(publication_data))
-                    session.commit()
-            session.close()
 
+        with ThreadPoolExecutor(max_workers=8) as executor:
+            parse_detail_with_keyword = partial(parse_detail, keyword=keywords)
+            results = executor.map(parse_detail_with_keyword, range(1, 11))
+        
+        research_gate_publication = defi_research_gate_publication_table()
+        session = create_session()
+        for items in results:
+            for item in items:
+                publication_data = {
+                    'title': item.get('title'),
+                    'link': item.get('link'),
+                    'year': item.get('year'),
+                    'publication_type': item.get('publication_type'),
+                    'publication_date': parse_date(item.get('publication_date')),
+                    'doi': item.get('doi', ''),  # 預設 DOI 為空字符串
+                    'abstract': item.get('abstract'),
+                    'authors': item.get('authors'),
+                    'patent': item.get('patent', ''),  # 預設 patent 為空字符串
+                    'created_at': datetime.datetime.now(),
+                    'updated_at': datetime.datetime.now(),
+                    'trackid': trackid,
+                }
+                print(publication_data)
+                writer.writerow(publication_data)
+                # 將數據插入資料庫
+                session.execute(insert(research_gate_publication).values(publication_data))
+                session.commit()
+        session.close()
+            
 
 # if __name__ == '__main__':
 #     # cf_clearance 一定要是經過cloudflare驗證的，如果沒有辦法觸發cloudflare 那就先跑一次

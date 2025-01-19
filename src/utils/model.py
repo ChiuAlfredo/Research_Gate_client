@@ -95,6 +95,7 @@ class ResearchGatePublicationItem(scrapy.Item):
     abstract = scrapy.Field()
     authors = scrapy.Field()
     patent = scrapy.Field()
+
     
 class ResearchGateQuestionItem(scrapy.Item):
     title = scrapy.Field()
