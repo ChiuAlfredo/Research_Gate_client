@@ -177,7 +177,7 @@ def research_question(keywords,cf_clearance, user_agent,trackid):
 
         with ThreadPoolExecutor(max_workers=1) as executor:
             parse_detail_with_keyword = partial(parse_detail, keyword=keywords)
-            results = executor.map(parse_detail_with_keyword, range(1, 11))
+            results = executor.map(parse_detail_with_keyword, range(1, 101))
         
         research_gate_questions = defi_research_gate_questions_table()
         session = create_session()

@@ -198,7 +198,7 @@ def research_publication(keywords,cf_clearance, user_agent,trackid):
 
         with ThreadPoolExecutor(max_workers=8) as executor:
             parse_detail_with_keyword = partial(parse_detail, keyword=keywords)
-            results = executor.map(parse_detail_with_keyword, range(1, 11))
+            results = executor.map(parse_detail_with_keyword, range(1, 101))
         
         research_gate_publication = defi_research_gate_publication_table()
         session = create_session()
