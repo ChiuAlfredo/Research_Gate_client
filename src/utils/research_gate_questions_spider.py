@@ -1,19 +1,20 @@
 import csv
 import datetime
 import ssl
+import uuid
 from concurrent.futures import ThreadPoolExecutor
 from functools import partial
+from typing import Optional
 
 import requests
 from bs4 import BeautifulSoup
 from dateutil import parser
 from requests.adapters import HTTPAdapter
-from sqlalchemy import insert, func
+from sqlalchemy import func, insert
 
 from utils.model import (ResearchGateQuestionItem, create_session,
-                         defi_research_gate_questions_table, defi_search_history_table)
-from typing import Optional
-import uuid
+                         defi_research_gate_questions_table,
+                         defi_search_history_table)
 
 cookies = {}
 headers = {}
@@ -57,7 +58,7 @@ def parse_detail(page, keyword):
         question_date = sing_question.select(
             '[class="nova-legacy-e-list__item nova-legacy-v-entity-item__meta-data-item"]')[0].text
         
-        abstract = sing_question.select('[class="Linkify"] div')[0].text if sing_question.select('[class="Linkify"] div') else ''
+        abstract = ','.join(element.get_text(strip=True) for element in sing_question.select('[class="Linkify"] div')) if sing_question.select('[class="Linkify"] div') else ''
         comments = get_comments(session, link)
         item['title'] = title
         item['link'] = link
@@ -152,7 +153,7 @@ def write_history_que(keywords,trackid):
 
     log_search_history(
         trackid=trackid,
-        function_name="research-gate-question",
+        function_name="research-gate-questions",
         keyword=keywords,
         keyword_type="AND",
         status="Success",

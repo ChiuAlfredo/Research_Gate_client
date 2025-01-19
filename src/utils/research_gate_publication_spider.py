@@ -1,19 +1,20 @@
 import csv
 import datetime
 import ssl
+import uuid
 from concurrent.futures import ThreadPoolExecutor
 from functools import partial
+from typing import Optional
 
 import requests
 from bs4 import BeautifulSoup
 from dateutil import parser
 from requests.adapters import HTTPAdapter
-from sqlalchemy import insert, func
+from sqlalchemy import func, insert
 
 from utils.model import (ResearchGatePublicationItem, create_session,
-                         defi_research_gate_publication_table, defi_search_history_table)
-from typing import Optional
-import uuid
+                         defi_research_gate_publication_table,
+                         defi_search_history_table)
 
 cookies = {}
 headers = {}
@@ -67,8 +68,8 @@ def get_publication_detail(session, title, link, publication_type):
         '[class="nova-legacy-v-person-list-item__align"] [class="nova-legacy-e-text nova-legacy-e-text--size-m nova-legacy-e-text--family-display nova-legacy-e-text--spacing-none nova-legacy-e-text--color-inherit nova-legacy-v-person-list-item__title"]')])
     abstract_elements = soup.select(
         '[class="nova-legacy-e-text nova-legacy-e-text--size-m nova-legacy-e-text--family-sans-serif nova-legacy-e-text--spacing-none nova-legacy-e-text--color-grey-800 research-detail-middle-section__abstract"]')
-    abstract = abstract_elements[0].text if abstract_elements else ''
-
+    abstract = ','.join(element.get_text(strip=True) for element in abstract_elements.select('[class="Linkify"] div')) if abstract_elements.select('[class="Linkify"] div') else ''
+        
     # 確保 detail_soup 存在並提取 publication_date 和 year
     if detail_soup and len(detail_soup) > 0:
         publication_date = detail_soup[0].select('[class="nova-legacy-e-list__item"]')[0].text
@@ -85,7 +86,7 @@ def get_publication_detail(session, title, link, publication_type):
     item['abstract'] = abstract
     item['authors'] = authors
     if publication_type == 'Article':
-        doi = detail_soup[1].text if len(detail_soup) > 2 else ''
+        doi = detail_soup[1].text if len(detail_soup) >= 2 else ''
         item['doi'] = doi
         item['patent'] = ''
     elif publication_type == 'Patent':
